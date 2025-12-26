@@ -1,6 +1,5 @@
-use std::io::{BufRead, BufReader, Read};
-use std::{fs, io};
-use std::path::Component::ParentDir;
+use std::io::{BufRead, BufReader, Result};
+use std::{fs};
 
 fn main() {
     let mut paths: Vec<String> = Vec::new();
@@ -9,16 +8,19 @@ fn main() {
     get_paths("./", &mut paths);
 
     for path in paths {
-        let last = match get_last_line(&path, &ignored_paths) {
-            Ok(None) => continue,
-            Ok(res) => res.unwrap_or_default(),
+        if should_ignore_path(&path, &ignored_paths) {
+            continue;
+        }
+
+        let has_newline = match ends_with_newline(&path) {
+            Ok(v) => v,
             Err(_) => {
-                println!("error getting last line");
-                continue;
+                println!("error checking newline");
+                continue
             }
         };
 
-       if last == "" {
+        if has_newline {
            println!("\x1b[32m[{path}] Ok\x1b[0m")
        } else {
            println!("\x1b[31m[{path}] Error - no new line on the end of file\x1b[0m")
@@ -26,22 +28,13 @@ fn main() {
     }
 }
 
-fn get_last_line(path: &str, ignored_paths: &Vec<String>) -> io::Result<Option<String>> {
+fn should_ignore_path(path: &str, ignored_paths: &Vec<String>) -> bool {
     for ignored_path in ignored_paths {
-        if (path.contains(ignored_path)) {
-            return Ok(None);
+        if path.contains(ignored_path) {
+            return true
         }
     }
-
-    let file = fs::File::open(&path)?;
-    let reader = BufReader::new(file);
-
-    let last = reader
-        .lines()
-        .last()
-        .transpose()?;
-
-    Ok(last)
+    return false
 }
 
 fn get_paths(path: &str, paths: &mut Vec<String>) {
@@ -59,6 +52,7 @@ fn get_paths(path: &str, paths: &mut Vec<String>) {
 }
 
 fn get_ignored(paths: &mut Vec<String>) {
+    // *untitled.ignore* as the ignore file of untitled format checker
     let file = match fs::File::open("./untitled.ignore") {
         Ok(file) => file,
         Err(err) => {
@@ -72,4 +66,9 @@ fn get_ignored(paths: &mut Vec<String>) {
     for line in reader.lines() {
         paths.push(line.unwrap())
     }
+}
+
+fn ends_with_newline(path: &str) -> Result<bool> {
+    let data = fs::read(path)?;
+    Ok(matches!(data.last(), Some(b'\n')))
 }
