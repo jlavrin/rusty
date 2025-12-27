@@ -1,8 +1,11 @@
+mod utils;
+
 use std::io::{BufRead, BufReader, Result};
 use std::{fs};
 use std::time::Instant;
 
 fn main() {
+    utils::test_function_from_different_module("injecting some module to main func");
     let mut paths: Vec<String> = Vec::new();
     let mut ignored_paths: Vec<String> = Vec::new();
     get_ignored(&mut ignored_paths);
@@ -39,7 +42,7 @@ fn should_ignore_path(path: &str, ignored_paths: &Vec<String>) -> bool {
             return true
         }
     }
-    return false
+    false
 }
 
 fn get_paths(path: &str, paths: &mut Vec<String>) {
